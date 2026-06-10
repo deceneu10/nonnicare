@@ -18,7 +18,6 @@ function handleTwilioMediaStream(twilioWs) {
   let openAISession = null;
   let callStartTime = null;
   let fullTranscript = '';
-  let toPhoneNumber = process.env.TARGET_PHONE_NUMBER;
 
   // ── Helper: forward audio from OpenAI → Twilio ──────────────────────────
   function sendAudioToTwilio(base64MulawChunk) {
@@ -47,7 +46,7 @@ function handleTwilioMediaStream(twilioWs) {
 
     logCall({
       callSid,
-      to: toPhoneNumber,
+      to: process.env.TARGET_PHONE_NUMBER,
       from: process.env.TWILIO_PHONE_NUMBER,
       durationSeconds,
       transcript: fullTranscript,
@@ -72,10 +71,6 @@ function handleTwilioMediaStream(twilioWs) {
         callSid   = msg.start.callSid;
         callStartTime = Date.now();
 
-        // Prefer the actual dialled number passed as a custom TwiML parameter,
-        // falling back to the env default if not present.
-        toPhoneNumber = msg.start.customParameters?.to || process.env.TARGET_PHONE_NUMBER;
-
         console.log(`🔊 Media stream started | SID: ${streamSid}`);
 
         // Create OpenAI Realtime session and wire up callbacks
@@ -96,19 +91,6 @@ function handleTwilioMediaStream(twilioWs) {
 
         openAISession.onError = (err) => {
           console.error('❌ OpenAI session error in audio bridge:', err.message);
-        };
-
-        openAISession.onSpeechStarted = () => {
-          // 1. Tell OpenAI to stop generating immediately
-          openAISession.cancelResponse();
-
-          // 2. Flush Twilio's audio buffer so queued AI audio stops playing
-          if (twilioWs.readyState === twilioWs.OPEN && streamSid) {
-            twilioWs.send(JSON.stringify({
-              event: 'clear',
-              streamSid,
-            }));
-          }
         };
 
         openAISession.onClose = () => {

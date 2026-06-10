@@ -241,6 +241,19 @@ The server is exposed at `https://old2call.myai-things.com` via a Cloudflare tun
 
 ---
 
+## Changelog
+
+### 2026-06-10
+**Barge-in support** — when the caller interrupts Giulia mid-sentence, playback now stops immediately instead of continuing over the caller's voice. Two things happen the moment OpenAI's server VAD detects speech (`input_audio_buffer.speech_started`):
+1. `response.cancel` is sent to OpenAI to stop delta generation.
+2. A `clear` event is sent to Twilio to flush any AI audio already buffered in the media stream.
+Files changed: `openai-realtime.js` (new `onSpeechStarted` callback + `cancelResponse()` method), `audio-bridge.js` (wires the callback).
+
+**Teardown `to` logging fix** — `teardown()` was always logging `TARGET_PHONE_NUMBER` as the called number, even when a custom number was passed via `POST /api/calls/initiate`. The actual dialled number is now threaded through the TwiML URL as a query param (`?to=...`), embedded in the `<Stream>` element as a `<Parameter>`, and read from `msg.start.customParameters.to` in the audio bridge at stream-start time.
+Files changed: `twilio-handler.js` (`initiateOutboundCall` appends `?to=` to TwiML URL; `generateTwiML` accepts and embeds the number), `server.js` (passes `req.query.to` to `generateTwiML`), `audio-bridge.js` (reads `customParameters.to`, falls back to env var).
+
+---
+
 ## Known Limitations / Future Work
 
 - **No DB logging yet** — transcripts are console-only. PostgreSQL insert stub is in `call-logger.js`.

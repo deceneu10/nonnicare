@@ -13,7 +13,7 @@ const client = twilio(
  */
 async function initiateOutboundCall(targetPhoneNumber) {
   const from = process.env.TWILIO_PHONE_NUMBER;
-  const twimlUrl = `${process.env.PUBLIC_URL}/twilio/twiml`;
+  const twimlUrl = `${process.env.PUBLIC_URL}/twilio/twiml?to=${encodeURIComponent(targetPhoneNumber)}`;
 
   const call = await client.calls.create({
     to: targetPhoneNumber,
@@ -35,14 +35,20 @@ async function initiateOutboundCall(targetPhoneNumber) {
 /**
  * Generate TwiML that opens a Twilio Media Stream WebSocket
  * back to our server when the called party answers.
+ * @param {string} [toPhoneNumber] - The number being called; embedded as a custom
+ *   Stream parameter so audio-bridge can log it accurately.
  */
-function generateTwiML() {
+function generateTwiML(toPhoneNumber) {
   const streamUrl = `wss://${process.env.PUBLIC_URL.replace('https://', '')}/twilio/stream`;
+  const toParam = toPhoneNumber
+    ? `\n    <Parameter name="to" value="${toPhoneNumber}" />`
+    : '';
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Connect>
-    <Stream url="${streamUrl}" />
+    <Stream url="${streamUrl}">${toParam}
+    </Stream>
   </Connect>
 </Response>`;
 }

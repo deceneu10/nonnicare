@@ -62,7 +62,7 @@ app.get('/health', (req, res) => {
  */
 app.post('/twilio/twiml', (req, res) => {
   console.log('🔗 Twilio fetching TwiML...');
-  const twiml = generateTwiML();
+  const twiml = generateTwiML(req.query.to);
   res.setHeader('Content-Type', 'application/xml');
   res.status(200).send(twiml);
   console.log('📡 TwiML delivered (XML)');
